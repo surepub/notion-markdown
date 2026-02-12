@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, cast
 
 import mistune
 
+from markdown_to_notion._html import parse_block_html, preprocess_notion_html
 from markdown_to_notion._inline import _tok_children, _tok_raw, _tok_type, parse_inline
 
 if TYPE_CHECKING:
@@ -72,12 +73,107 @@ LANGUAGE_MAP: dict[str, str] = {
 }
 
 
+# All language values the Notion API accepts for code blocks.
+_NOTION_LANGUAGES: frozenset[str] = frozenset(
+    {
+        "abap",
+        "agda",
+        "arduino",
+        "assembly",
+        "bash",
+        "basic",
+        "bnf",
+        "c",
+        "c#",
+        "c++",
+        "clojure",
+        "coffeescript",
+        "coq",
+        "css",
+        "dart",
+        "dhall",
+        "diff",
+        "docker",
+        "ebnf",
+        "elixir",
+        "elm",
+        "erlang",
+        "f#",
+        "flow",
+        "fortran",
+        "gherkin",
+        "glsl",
+        "go",
+        "graphql",
+        "groovy",
+        "haskell",
+        "html",
+        "idris",
+        "java",
+        "javascript",
+        "json",
+        "julia",
+        "kotlin",
+        "latex",
+        "less",
+        "lisp",
+        "livescript",
+        "llvm ir",
+        "lua",
+        "makefile",
+        "markdown",
+        "markup",
+        "matlab",
+        "mathematica",
+        "mermaid",
+        "mizar",
+        "nix",
+        "notion formula",
+        "objective-c",
+        "ocaml",
+        "pascal",
+        "perl",
+        "php",
+        "plain text",
+        "powershell",
+        "prolog",
+        "protobuf",
+        "purescript",
+        "python",
+        "r",
+        "racket",
+        "reason",
+        "ruby",
+        "rust",
+        "sass",
+        "scala",
+        "scheme",
+        "scss",
+        "shell",
+        "solidity",
+        "sql",
+        "swift",
+        "toml",
+        "typescript",
+        "vb.net",
+        "verilog",
+        "vhdl",
+        "visual basic",
+        "webassembly",
+        "xml",
+        "yaml",
+        "java/c/c++/c#",
+    }
+)
+
+
 def _normalize_language(info: str) -> str:
     """Turn a code-fence info string into a Notion language identifier."""
     if not info:
         return "plain text"
     lang = info.strip().lower().split()[0]
-    return LANGUAGE_MAP.get(lang, lang)
+    normalised = LANGUAGE_MAP.get(lang, lang)
+    return normalised if normalised in _NOTION_LANGUAGES else "plain text"
 
 
 # ── Token attribute helpers ────────────────────────────────────────────────
@@ -344,8 +440,16 @@ def _extract_row_cells(row_tok: _Token) -> list[list[RichText]]:
     ]
 
 
-def _table_row(cells: list[list[RichText]]) -> TableRowBlock:
-    return {"type": "table_row", "table_row": {"cells": cells}}
+def _pad_row(cells: list[list[RichText]], width: int) -> list[list[RichText]]:
+    """Ensure a row has exactly *width* cells (Notion API requirement)."""
+    if len(cells) < width:
+        return [*cells, *([[] for _ in range(width - len(cells))])]
+    return cells
+
+
+def _table_row(cells: list[list[RichText]], width: int = 0) -> TableRowBlock:
+    padded = _pad_row(cells, width) if width else cells
+    return {"type": "table_row", "table_row": {"cells": padded}}
 
 
 def _convert_table(token: _Token) -> NotionBlock:
@@ -374,22 +478,28 @@ def _convert_table(token: _Token) -> NotionBlock:
                 width = table_width or len(all_cells)
                 for i in range(0, len(all_cells), width):
                     row_cells = all_cells[i : i + width]
-                    rows.append(_table_row(row_cells))
                     table_width = max(table_width, len(row_cells))
+                    rows.append(_table_row(row_cells, table_width))
             else:
                 for row_child in body_children:
                     cells = _extract_row_cells(row_child)
                     if cells:
                         table_width = max(table_width, len(cells))
-                        rows.append(_table_row(cells))
+                        rows.append(_table_row(cells, table_width))
+
+    # Pad all rows to final table_width (header may have been added before width was known)
+    final_width = table_width or 1
+    padded_rows: list[TableRowBlock] = [
+        _table_row(r["table_row"]["cells"], final_width) for r in rows
+    ]
 
     return {
         "type": "table",
         "table": {
-            "table_width": table_width or 1,
+            "table_width": final_width,
             "has_column_header": has_header,
             "has_row_header": False,
-            "children": rows,
+            "children": padded_rows,
         },
     }
 
@@ -433,7 +543,20 @@ def _convert_block_html(token: _Token) -> list[NotionBlock]:
     raw = _tok_raw(token).strip()
     if not raw:
         return []
+    # Try Notion-specific HTML patterns first
+    notion_blocks = parse_block_html(raw)
+    if notion_blocks is not None:
+        return notion_blocks
+    # Fall back to paragraph with raw text
     return [_paragraph_block([_plain_text_item(raw)])]
+
+
+# ── Parser (cached) ───────────────────────────────────────────────────────
+
+_MD = mistune.create_markdown(
+    renderer="ast",
+    plugins=["table", "strikethrough", "task_lists", "math"],
+)
 
 
 # ── Public entry point ─────────────────────────────────────────────────────
@@ -447,11 +570,8 @@ def parse(markdown: str) -> list[NotionBlock]:
     list can be passed directly to ``notion-client``'s
     ``pages.create(children=…)`` or ``blocks.children.append(children=…)``.
     """
-    md = mistune.create_markdown(
-        renderer="ast",
-        plugins=["table", "strikethrough", "task_lists", "math"],
-    )
-    raw_result = md(markdown)
+    preprocessed = preprocess_notion_html(markdown)
+    raw_result = _MD(preprocessed)
     if not isinstance(raw_result, list):
         return []
     tokens = cast("list[_Token]", raw_result)
