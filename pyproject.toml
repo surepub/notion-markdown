@@ -1,0 +1,120 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "markdown-to-notion"
+dynamic = ["version"]
+description = "Convert Markdown to Notion API block objects"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [{ name = "Sure", email = "eng@sureapp.com" }]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Typing :: Typed",
+]
+dependencies = [
+    "mistune>=3.1,<4",
+    "typing_extensions>=4.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/sureapp/markdown-to-notion"
+Repository = "https://github.com/sureapp/markdown-to-notion"
+Issues = "https://github.com/sureapp/markdown-to-notion/issues"
+
+[tool.hatch.version]
+path = "src/markdown_to_notion/__init__.py"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "F",      # pyflakes
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "I",      # isort
+    "N",      # pep8-naming
+    "UP",     # pyupgrade
+    "ANN",    # flake8-annotations
+    "ASYNC",  # flake8-async
+    "S",      # flake8-bandit (security)
+    "B",      # flake8-bugbear
+    "A",      # flake8-builtins
+    "COM",    # flake8-commas
+    "C4",     # flake8-comprehensions
+    "DTZ",    # flake8-datetimez
+    "EM",     # flake8-errmsg
+    "FA",     # flake8-future-annotations
+    "ISC",    # flake8-implicit-str-concat
+    "ICN",    # flake8-import-conventions
+    "LOG",    # flake8-logging
+    "G",      # flake8-logging-format
+    "PIE",    # flake8-pie
+    "T20",    # flake8-print
+    "PT",     # flake8-pytest-style
+    "Q",      # flake8-quotes
+    "RSE",    # flake8-raise
+    "RET",    # flake8-return
+    "SLF",    # flake8-self
+    "SLOT",   # flake8-slots
+    "SIM",    # flake8-simplify
+    "TID",    # flake8-tidy-imports
+    "TCH",    # flake8-type-checking
+    "ARG",    # flake8-unused-arguments
+    "PTH",    # flake8-use-pathlib
+    "TD",     # flake8-todos
+    "FIX",    # flake8-fixme
+    "ERA",    # eradicate (commented-out code)
+    "PGH",    # pygrep-hooks
+    "PL",     # pylint
+    "TRY",    # tryceratops
+    "FLY",    # flynt
+    "PERF",   # perflint
+    "FURB",   # refurb
+    "RUF",    # ruff-specific rules
+]
+ignore = [
+    "UP007",   # Union[X, Y] → X | Y — keep Union for runtime type aliases
+    "ANN401",  # Dynamically typed expressions (typing.Any) are disallowed
+    "COM812",  # missing trailing comma — conflicts with ruff formatter
+    "ISC001",  # implicit string concat on one line — conflicts with ruff formatter
+    "TD002",   # missing author in TODO
+    "TD003",   # missing issue link in TODO
+    "FIX002",  # allow TODO comments
+    "S101",    # allow assert in tests
+    "PLR0911", # too many return statements — dispatch functions need them
+    "PLR0912", # too many branches — token dispatch functions need them
+    "PLR0913", # too many arguments to function call
+    "PLR2004", # magic values in comparisons — heading levels etc.
+    "TRY003",  # avoid specifying long messages outside the exception class
+    "EM101",   # exception must not use a string literal
+    "EM102",   # exception must not use an f-string literal
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = [
+    "S101",    # assert is fine in tests
+    "ANN",     # no type annotations required in tests
+    "ARG",     # unused arguments (fixtures, etc.)
+    "PLC0415", # imports inside functions are fine in tests
+    "PLR2004", # magic values in comparisons are fine in tests
+    "SLF001",  # private member access is fine in tests
+]
+
+[tool.mypy]
+strict = true
+python_version = "3.10"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
