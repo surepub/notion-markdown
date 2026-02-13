@@ -1,8 +1,6 @@
 # notion-markdown
 
-[![Lint & Format](https://github.com/surepub/notion-markdown/actions/workflows/ci.yml/badge.svg?event=push&job=lint)](https://github.com/surepub/notion-markdown/actions/workflows/ci.yml)
-[![Type Check](https://github.com/surepub/notion-markdown/actions/workflows/ci.yml/badge.svg?event=push&job=typecheck)](https://github.com/surepub/notion-markdown/actions/workflows/ci.yml)
-[![Tests](https://github.com/surepub/notion-markdown/actions/workflows/ci.yml/badge.svg?event=push&job=test)](https://github.com/surepub/notion-markdown/actions/workflows/ci.yml)
+[![CI](https://github.com/surepub/notion-markdown/actions/workflows/ci.yml/badge.svg)](https://github.com/surepub/notion-markdown/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/surepub/notion-markdown/graph/badge.svg)](https://codecov.io/gh/surepub/notion-markdown)
 [![PyPI](https://img.shields.io/pypi/v/notion-markdown)](https://pypi.org/project/notion-markdown/)
 [![Python](https://img.shields.io/pypi/pyversions/notion-markdown)](https://pypi.org/project/notion-markdown/)
