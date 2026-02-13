@@ -9,7 +9,7 @@ description = "Convert Markdown to Notion API block objects"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
-authors = [{ name = "Sure", email = "eng@sureapp.com" }]
+authors = [{ name = "Sure", email = "support@sureapp.com" }]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -21,15 +21,15 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
     "Typing :: Typed",
 ]
-dependencies = [
-    "mistune>=3.1,<4",
-    "typing_extensions>=4.0",
-]
+dependencies = ["mistune>=3.1,<4", "typing_extensions>=4.0"]
+
+[project.scripts]
+notion-markdown = "notion_markdown._cli:main"
 
 [project.urls]
-Homepage = "https://github.com/sureapp/notion-markdown"
-Repository = "https://github.com/sureapp/notion-markdown"
-Issues = "https://github.com/sureapp/notion-markdown/issues"
+Homepage = "https://github.com/surepub/notion-markdown"
+Repository = "https://github.com/surepub/notion-markdown"
+Issues = "https://github.com/surepub/notion-markdown/issues"
 
 [tool.hatch.version]
 path = "src/notion_markdown/__init__.py"
@@ -40,49 +40,49 @@ line-length = 100
 
 [tool.ruff.lint]
 select = [
-    "F",      # pyflakes
-    "E",      # pycodestyle errors
-    "W",      # pycodestyle warnings
-    "I",      # isort
-    "N",      # pep8-naming
-    "UP",     # pyupgrade
-    "ANN",    # flake8-annotations
-    "ASYNC",  # flake8-async
-    "S",      # flake8-bandit (security)
-    "B",      # flake8-bugbear
-    "A",      # flake8-builtins
-    "COM",    # flake8-commas
-    "C4",     # flake8-comprehensions
-    "DTZ",    # flake8-datetimez
-    "EM",     # flake8-errmsg
-    "FA",     # flake8-future-annotations
-    "ISC",    # flake8-implicit-str-concat
-    "ICN",    # flake8-import-conventions
-    "LOG",    # flake8-logging
-    "G",      # flake8-logging-format
-    "PIE",    # flake8-pie
-    "T20",    # flake8-print
-    "PT",     # flake8-pytest-style
-    "Q",      # flake8-quotes
-    "RSE",    # flake8-raise
-    "RET",    # flake8-return
-    "SLF",    # flake8-self
-    "SLOT",   # flake8-slots
-    "SIM",    # flake8-simplify
-    "TID",    # flake8-tidy-imports
-    "TCH",    # flake8-type-checking
-    "ARG",    # flake8-unused-arguments
-    "PTH",    # flake8-use-pathlib
-    "TD",     # flake8-todos
-    "FIX",    # flake8-fixme
-    "ERA",    # eradicate (commented-out code)
-    "PGH",    # pygrep-hooks
-    "PL",     # pylint
-    "TRY",    # tryceratops
-    "FLY",    # flynt
-    "PERF",   # perflint
-    "FURB",   # refurb
-    "RUF",    # ruff-specific rules
+    "F",     # pyflakes
+    "E",     # pycodestyle errors
+    "W",     # pycodestyle warnings
+    "I",     # isort
+    "N",     # pep8-naming
+    "UP",    # pyupgrade
+    "ANN",   # flake8-annotations
+    "ASYNC", # flake8-async
+    "S",     # flake8-bandit (security)
+    "B",     # flake8-bugbear
+    "A",     # flake8-builtins
+    "COM",   # flake8-commas
+    "C4",    # flake8-comprehensions
+    "DTZ",   # flake8-datetimez
+    "EM",    # flake8-errmsg
+    "FA",    # flake8-future-annotations
+    "ISC",   # flake8-implicit-str-concat
+    "ICN",   # flake8-import-conventions
+    "LOG",   # flake8-logging
+    "G",     # flake8-logging-format
+    "PIE",   # flake8-pie
+    "T20",   # flake8-print
+    "PT",    # flake8-pytest-style
+    "Q",     # flake8-quotes
+    "RSE",   # flake8-raise
+    "RET",   # flake8-return
+    "SLF",   # flake8-self
+    "SLOT",  # flake8-slots
+    "SIM",   # flake8-simplify
+    "TID",   # flake8-tidy-imports
+    "TCH",   # flake8-type-checking
+    "ARG",   # flake8-unused-arguments
+    "PTH",   # flake8-use-pathlib
+    "TD",    # flake8-todos
+    "FIX",   # flake8-fixme
+    "ERA",   # eradicate (commented-out code)
+    "PGH",   # pygrep-hooks
+    "PL",    # pylint
+    "TRY",   # tryceratops
+    "FLY",   # flynt
+    "PERF",  # perflint
+    "FURB",  # refurb
+    "RUF",   # ruff-specific rules
 ]
 ignore = [
     "UP007",   # Union[X, Y] → X | Y — keep Union for runtime type aliases
