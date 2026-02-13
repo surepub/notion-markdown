@@ -21,7 +21,7 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
     "Typing :: Typed",
 ]
-dependencies = ["mistune>=3.1,<4", "typing_extensions>=4.0"]
+dependencies = ["mistune>=3.1,<4", "typing_extensions>=4.5"]
 
 [project.scripts]
 notion-markdown = "notion_markdown._cli:main"

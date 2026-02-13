@@ -7,7 +7,7 @@ import json
 import sys
 from pathlib import Path
 
-from notion_markdown import __version__, convert, to_markdown
+from notion_markdown import __version__, to_markdown, to_notion
 
 
 def _add_io_args(parser: argparse.ArgumentParser) -> None:
@@ -50,7 +50,7 @@ def _write_output(text: str, output: Path | None) -> None:
 def _cmd_to_notion(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
     """Convert Markdown to Notion API JSON blocks."""
     markdown = _read_input(args, parser)
-    blocks = convert(markdown)
+    blocks = to_notion(markdown)
     indent = args.indent if args.indent > 0 else None
     output = json.dumps(blocks, indent=indent, ensure_ascii=False) + "\n"
     _write_output(output, args.output)

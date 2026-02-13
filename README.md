@@ -9,10 +9,10 @@
 Bidirectional conversion between Markdown and Notion API block objects. Fully typed, zero dependencies beyond [mistune](https://github.com/lepture/mistune).
 
 ```python
-from notion_markdown import convert, to_markdown
+from notion_markdown import to_notion, to_markdown
 
 # Markdown → Notion blocks
-blocks = convert("# Hello\n\nSome **bold** text.")
+blocks = to_notion("# Hello\n\nSome **bold** text.")
 
 # Notion blocks → Markdown
 md = to_markdown(blocks)
@@ -58,17 +58,17 @@ notion-markdown to-markdown blocks.json -o output.md
 
 ## Python API
 
-### `convert()` — Markdown to Notion blocks
+### `to_notion()` — Markdown to Notion blocks
 
 Takes a Markdown string and returns a list of Notion API block objects.
 Pass them directly to [notion-client](https://github.com/ramnes/notion-sdk-py):
 
 ```python
 from notion_client import Client
-from notion_markdown import convert
+from notion_markdown import to_notion
 
 notion = Client(auth="secret_...")
-blocks = convert(open("README.md").read())
+blocks = to_notion(open("README.md").read())
 
 notion.pages.create(
     parent={"page_id": "..."},
@@ -80,13 +80,13 @@ notion.pages.create(
 ### `to_markdown()` — Notion blocks to Markdown
 
 Takes a list of Notion API block objects and returns a Markdown string.
-Works with blocks from `convert()` or directly from the Notion API:
+Works with blocks from `to_notion()` or directly from the Notion API:
 
 ```python
-from notion_markdown import to_markdown
+from notion_markdown import to_notion, to_markdown
 
-# From convert() output
-blocks = convert("# Hello\n\nWorld")
+# From to_notion() output
+blocks = to_notion("# Hello\n\nWorld")
 md = to_markdown(blocks)
 
 # From the Notion API
@@ -100,13 +100,29 @@ The two functions are inverses — converting in either direction and back
 produces identical output:
 
 ```python
-from notion_markdown import convert, to_markdown
+from notion_markdown import to_notion, to_markdown
 
 md = "# Title\n\nSome **bold** text.\n"
-assert to_markdown(convert(md)) == md
+assert to_markdown(to_notion(md)) == md
 
-blocks = convert(md)
-assert convert(to_markdown(blocks)) == blocks
+blocks = to_notion(md)
+assert to_notion(to_markdown(blocks)) == blocks
+```
+
+### Migration from `convert()`
+
+In v0.7.0, `convert()` was renamed to `to_notion()` for consistency with
+`to_markdown()`. The old `convert()` function still works but emits a
+`DeprecationWarning`:
+
+```python
+# Old (deprecated)
+from notion_markdown import convert
+blocks = convert("# Hello")  # ⚠️ DeprecationWarning
+
+# New
+from notion_markdown import to_notion
+blocks = to_notion("# Hello")
 ```
 
 ### Handling large documents (> 100 blocks)
@@ -116,7 +132,7 @@ The Notion API limits each request to 100 blocks. Split the list and append:
 ```python
 from itertools import batched  # Python 3.12+
 
-blocks = convert(long_markdown)
+blocks = to_notion(long_markdown)
 
 for i, chunk in enumerate(batched(blocks, 100)):
     if i == 0:
@@ -167,7 +183,7 @@ for i, chunk in enumerate(batched(blocks, 100)):
 Nested formatting is fully supported — `**bold *and italic* text**` produces
 the correct flat list of rich-text items with accumulated annotations.
 
-All conversions work in both directions: `convert()` and `to_markdown()` handle
+All conversions work in both directions: `to_notion()` and `to_markdown()` handle
 every block and inline type listed above.
 
 ## Type Safety
@@ -176,9 +192,9 @@ Every return type is a `TypedDict`, giving you full IDE autocomplete and
 `mypy --strict` compatibility. No `dict[str, Any]` in the public API.
 
 ```python
-from notion_markdown import convert, to_markdown, NotionBlock, ParagraphBlock
+from notion_markdown import to_notion, to_markdown, NotionBlock, ParagraphBlock
 
-blocks: list[NotionBlock] = convert("Hello **world**")
+blocks: list[NotionBlock] = to_notion("Hello **world**")
 md: str = to_markdown(blocks)
 
 # IDE knows blocks[0] could be ParagraphBlock, HeadingOneBlock, etc.

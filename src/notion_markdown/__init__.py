@@ -2,15 +2,15 @@
 
 .. code-block:: python
 
-    from notion_markdown import convert, to_markdown
+    from notion_markdown import to_notion, to_markdown
 
-    blocks = convert("# Hello\\n\\nSome **bold** text.")
+    blocks = to_notion("# Hello\\n\\nSome **bold** text.")
     # → list of Notion API block dicts, ready for notion-client
 
     md = to_markdown(blocks)
     # → "# Hello\\n\\nSome **bold** text.\\n"
 
-The return value of ``convert()`` can be passed directly to ``notion-client``::
+The return value of ``to_notion()`` can be passed directly to ``notion-client``::
 
     from notion_client import Client
 
@@ -21,6 +21,8 @@ The return value of ``convert()`` can be passed directly to ``notion-client``::
         children=blocks,
     )
 """
+
+from typing_extensions import deprecated
 
 from notion_markdown._parser import parse
 from notion_markdown._renderer import to_markdown
@@ -71,10 +73,10 @@ from notion_markdown._types import (
     VideoData,
 )
 
-__version__ = "0.6.0"
+__version__ = "0.7.0"
 
 
-def convert(markdown: str) -> list[NotionBlock]:
+def to_notion(markdown: str) -> list[NotionBlock]:
     """Convert a Markdown string to a list of Notion API block objects.
 
     Parameters
@@ -91,12 +93,22 @@ def convert(markdown: str) -> list[NotionBlock]:
 
     Examples
     --------
-    >>> from notion_markdown import convert
-    >>> blocks = convert("# Title\\n\\nHello **world**!")
+    >>> from notion_markdown import to_notion
+    >>> blocks = to_notion("# Title\\n\\nHello **world**!")
     >>> blocks[0]["type"]
     'heading_1'
     """
     return parse(markdown)
+
+
+@deprecated("Use to_notion() instead")
+def convert(markdown: str) -> list[NotionBlock]:
+    """Convert a Markdown string to a list of Notion API block objects.
+
+    .. deprecated::
+        Use :func:`to_notion` instead.
+    """
+    return to_notion(markdown)
 
 
 __all__ = [
@@ -147,4 +159,5 @@ __all__ = [
     "__version__",
     "convert",
     "to_markdown",
+    "to_notion",
 ]

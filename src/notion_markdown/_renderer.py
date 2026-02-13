@@ -24,7 +24,7 @@ def to_markdown(blocks: list[Any]) -> str:
     Parameters
     ----------
     blocks:
-        Notion block dicts (as returned by :func:`notion_markdown.convert`
+        Notion block dicts (as returned by :func:`notion_markdown.to_notion`
         or the Notion API).
 
     Returns
