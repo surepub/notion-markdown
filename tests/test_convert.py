@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from markdown_to_notion import __version__, convert
+from notion_markdown import __version__, convert
 
 
 class TestConvertAPI:
