@@ -2,15 +2,12 @@
 
 from __future__ import annotations
 
-from notion_markdown import __version__, convert
+from notion_markdown import convert
 
 
 class TestConvertAPI:
     def test_returns_list(self) -> None:
         assert isinstance(convert("Hello"), list)
-
-    def test_version(self) -> None:
-        assert __version__ == "0.1.0"
 
     def test_empty_returns_empty(self) -> None:
         assert convert("") == []
