@@ -31,7 +31,8 @@ def _add_io_args(parser: argparse.ArgumentParser) -> None:
 def _read_input(args: argparse.Namespace, parser: argparse.ArgumentParser) -> str:
     """Read input from file argument or stdin."""
     if args.file is not None:
-        return args.file.read_text(encoding="utf-8")
+        filepath: Path = args.file
+        return filepath.read_text(encoding="utf-8")
     if not sys.stdin.isatty():
         return sys.stdin.read()
     parser.error("no input provided — pass a file or pipe via stdin")

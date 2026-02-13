@@ -30,8 +30,7 @@ class TestToNotionStdout:
         blocks = json.loads(out)
         assert blocks[0]["type"] == "paragraph"
         assert any(
-            rt.get("annotations", {}).get("bold")
-            for rt in blocks[0]["paragraph"]["rich_text"]
+            rt.get("annotations", {}).get("bold") for rt in blocks[0]["paragraph"]["rich_text"]
         )
 
 
