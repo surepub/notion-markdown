@@ -7,7 +7,7 @@ import json
 import sys
 from pathlib import Path
 
-from notion_markdown import __version__, convert
+from notion_markdown import __version__, convert, to_markdown
 
 
 def _add_io_args(parser: argparse.ArgumentParser) -> None:
@@ -53,6 +53,16 @@ def _cmd_to_notion(args: argparse.Namespace, parser: argparse.ArgumentParser) ->
     blocks = convert(markdown)
     indent = args.indent if args.indent > 0 else None
     output = json.dumps(blocks, indent=indent, ensure_ascii=False) + "\n"
+    _write_output(output, args.output)
+
+
+def _cmd_to_markdown(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
+    """Convert Notion API JSON blocks to Markdown."""
+    raw = _read_input(args, parser)
+    blocks = json.loads(raw)
+    if not isinstance(blocks, list):
+        parser.error("input must be a JSON array of Notion blocks")
+    output = to_markdown(blocks)
     _write_output(output, args.output)
 
 
@@ -102,7 +112,7 @@ def main(argv: list[str] | None = None) -> None:
     if args.command == "to-notion":
         _cmd_to_notion(args, parser)
     elif args.command == "to-markdown":
-        parser.error("to-markdown is not yet implemented")
+        _cmd_to_markdown(args, parser)
     else:
         parser.print_help()
         sys.exit(2)

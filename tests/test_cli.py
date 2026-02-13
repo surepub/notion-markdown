@@ -67,8 +67,43 @@ class TestToNotionEdgeCases:
         assert json.loads(out) == []
 
 
-class TestToMarkdown:
-    def test_not_implemented(self):
+class TestToMarkdownStdout:
+    def test_file_to_stdout(self, tmp_path, capsys):
+        rt = [{"type": "text", "text": {"content": "Hello"}}]
+        blocks = [{"type": "heading_1", "heading_1": {"rich_text": rt, "is_toggleable": False}}]
+        jf = tmp_path / "input.json"
+        jf.write_text(json.dumps(blocks))
+        main(["to-markdown", str(jf)])
+        out = capsys.readouterr().out
+        assert "# Hello" in out
+
+    def test_stdin_to_stdout(self, tmp_path, monkeypatch, capsys):
+        rt = [{"type": "text", "text": {"content": "hi"}}]
+        blocks = [{"type": "paragraph", "paragraph": {"rich_text": rt}}]
+        jf = tmp_path / "in.json"
+        jf.write_text(json.dumps(blocks))
+        monkeypatch.setattr("sys.stdin", open(jf))  # noqa: SIM115, PTH123
+        monkeypatch.setattr("sys.stdin.isatty", lambda: False)
+        main(["to-markdown"])
+        out = capsys.readouterr().out
+        assert "hi" in out
+
+    def test_output_file(self, tmp_path):
+        blocks = [{"type": "divider", "divider": {}}]
+        jf = tmp_path / "input.json"
+        jf.write_text(json.dumps(blocks))
+        out = tmp_path / "output.md"
+        main(["to-markdown", str(jf), "-o", str(out)])
+        assert "---" in out.read_text()
+
+    def test_invalid_json_not_list(self, tmp_path):
+        jf = tmp_path / "bad.json"
+        jf.write_text('{"type": "paragraph"}')
+        with pytest.raises(SystemExit, match="2"):
+            main(["to-markdown", str(jf)])
+
+    def test_no_input_exits(self, monkeypatch):
+        monkeypatch.setattr("sys.stdin.isatty", lambda: True)
         with pytest.raises(SystemExit, match="2"):
             main(["to-markdown"])
 

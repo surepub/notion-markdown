@@ -1,13 +1,16 @@
-"""Convert Markdown to Notion API block objects.
+"""Convert between Markdown and Notion API block objects.
 
 .. code-block:: python
 
-    from notion_markdown import convert
+    from notion_markdown import convert, to_markdown
 
     blocks = convert("# Hello\\n\\nSome **bold** text.")
     # → list of Notion API block dicts, ready for notion-client
 
-The return value can be passed directly to ``notion-client``::
+    md = to_markdown(blocks)
+    # → "# Hello\\n\\nSome **bold** text.\\n"
+
+The return value of ``convert()`` can be passed directly to ``notion-client``::
 
     from notion_client import Client
 
@@ -20,6 +23,7 @@ The return value can be passed directly to ``notion-client``::
 """
 
 from notion_markdown._parser import parse
+from notion_markdown._renderer import to_markdown
 from notion_markdown._types import (
     BookmarkBlock,
     BookmarkData,
@@ -67,7 +71,7 @@ from notion_markdown._types import (
     VideoData,
 )
 
-__version__ = "0.5.0"
+__version__ = "0.6.0"
 
 
 def convert(markdown: str) -> list[NotionBlock]:
@@ -142,4 +146,5 @@ __all__ = [
     "VideoData",
     "__version__",
     "convert",
+    "to_markdown",
 ]
