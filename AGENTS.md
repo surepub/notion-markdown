@@ -6,7 +6,7 @@
 |--------|-----------|-------|
 | Run `pytest --cov --cov-fail-under=100` before opening PRs | Before bumping the version or creating a release | Push directly to `main` — branch protection requires PRs |
 | Use `uv` for dependency management | Before adding new dependencies to `pyproject.toml` | Hardcode version strings in tests — they break on every release |
-| Keep 100% test coverage | Before changing public API (`convert()`, `to_markdown()`, exported types) | Commit secrets or tokens |
+| Keep 100% test coverage | Before changing public API (`to_notion()`, `to_markdown()`, exported types) | Commit secrets or tokens |
 
 ## Release Process
 
@@ -44,8 +44,10 @@ Reverse (Notion → Markdown): `Notion block dicts → Markdown string`
 - `_types.py` — all public types are `TypedDict`s for IDE autocomplete and type safety
 
 **Two public entry points:**
-- `convert(markdown: str) -> list[NotionBlock]`
+- `to_notion(markdown: str) -> list[NotionBlock]`
 - `to_markdown(blocks: list[NotionBlock]) -> str`
+
+**`convert()` is a deprecated alias for `to_notion()`** — kept for backwards compatibility, emits `DeprecationWarning` via `@typing_extensions.deprecated` (PEP 702).
 
 ## Conventions
 
@@ -62,14 +64,14 @@ Reverse (Notion → Markdown): `Notion block dicts → Markdown string`
 
 Only two runtime dependencies — keep it minimal:
 - `mistune>=3.1,<4` — Markdown parser (AST mode)
-- `typing_extensions>=4.0` — backport of `NotRequired`
+- `typing_extensions>=4.5` — backport of `NotRequired`, `deprecated` (PEP 702)
 
 ## Testing
 
 - 100% coverage required (`--cov-fail-under=100`)
 - Test structure mirrors source: `test_parser.py`, `test_inline.py`, `test_html.py`, `test_convert.py`, `test_rich_text.py`, `test_renderer.py`
-- `test_convert.py` — end-to-end tests through the public `convert()` and `to_markdown()` APIs
-- `test_roundtrip.py` — **bidirectional snapshot tests** that pin exact output in both directions for 28 fixtures. Tests `convert(md) == blocks`, `to_markdown(blocks) == md`, and double-roundtrip stability. If either conversion changes, these tests force an intentional review.
+- `test_convert.py` — end-to-end tests through the public `to_notion()` and `to_markdown()` APIs, plus `convert()` deprecation warning test
+- `test_roundtrip.py` — **bidirectional snapshot tests** that pin exact output in both directions for 28 fixtures. Tests `to_notion(md) == blocks`, `to_markdown(blocks) == md`, and double-roundtrip stability. If either conversion changes, these tests force an intentional review.
 - `test_acid.py` — 10 complex real-world documents (dense inline formatting, 3-level nested lists, formatted table cells, full README with every block type, etc.) tested for exact roundtrip stability
 - Other test files test internal modules directly
 
@@ -81,4 +83,4 @@ pytest tests/ -v
 pytest tests/ --cov=notion_markdown --cov-report=term-missing --cov-fail-under=100 -v
 ```
 
-<!-- Last audited: 2026-02-12 | Added reverse pipeline (to_markdown), TypedDict cast pattern, roundtrip/acid test docs -->
+<!-- Last audited: 2026-02-12 | Renamed convert→to_notion, added deprecated alias docs -->

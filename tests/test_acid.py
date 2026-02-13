@@ -6,14 +6,14 @@ these tests exercise the full conversion pipeline with documents that
 combine many features at once.
 
 Each test asserts three things:
-1. ``to_markdown(convert(md))`` produces a known canonical Markdown
-2. ``convert(to_markdown(blocks))`` reproduces the same blocks
+1. ``to_markdown(to_notion(md))`` produces a known canonical Markdown
+2. ``to_notion(to_markdown(blocks))`` reproduces the same blocks
 3. A second roundtrip is identical to the first (no drift)
 """
 
 import pytest
 
-from notion_markdown import convert, to_markdown
+from notion_markdown import to_markdown, to_notion
 
 # ── Acid test documents ───────────────────────────────────────────────────
 #
@@ -137,7 +137,7 @@ class TestAcidRoundtripMdToBlocksToMd:
 
     @pytest.mark.parametrize(("name", "canonical_md"), ACID_TESTS, ids=_IDS)
     def test_md_roundtrip(self, name, canonical_md):
-        assert to_markdown(convert(canonical_md)) == canonical_md
+        assert to_markdown(to_notion(canonical_md)) == canonical_md
 
 
 class TestAcidRoundtripBlocksToMdToBlocks:
@@ -145,8 +145,8 @@ class TestAcidRoundtripBlocksToMdToBlocks:
 
     @pytest.mark.parametrize(("name", "canonical_md"), ACID_TESTS, ids=_IDS)
     def test_blocks_roundtrip(self, name, canonical_md):
-        blocks = convert(canonical_md)
-        assert convert(to_markdown(blocks)) == blocks
+        blocks = to_notion(canonical_md)
+        assert to_notion(to_markdown(blocks)) == blocks
 
 
 class TestAcidDoubleRoundtripStability:
@@ -154,9 +154,9 @@ class TestAcidDoubleRoundtripStability:
 
     @pytest.mark.parametrize(("name", "canonical_md"), ACID_TESTS, ids=_IDS)
     def test_double_roundtrip(self, name, canonical_md):
-        blocks_1 = convert(canonical_md)
+        blocks_1 = to_notion(canonical_md)
         md_1 = to_markdown(blocks_1)
-        blocks_2 = convert(md_1)
+        blocks_2 = to_notion(md_1)
         md_2 = to_markdown(blocks_2)
         assert md_1 == md_2, "Markdown drifted on second roundtrip"
         assert blocks_1 == blocks_2, "Blocks drifted on second roundtrip"
@@ -181,7 +181,7 @@ class TestAcidBlockCounts:
 
     @pytest.mark.parametrize(("name", "canonical_md"), ACID_TESTS, ids=_IDS)
     def test_block_count(self, name, canonical_md):
-        blocks = convert(canonical_md)
+        blocks = to_notion(canonical_md)
         assert len(blocks) == _EXPECTED_COUNTS[name]
 
 
@@ -190,7 +190,7 @@ class TestAcidBlockTypes:
 
     def test_full_readme_has_all_types(self):
         canonical = next(md for name, md in ACID_TESTS if name == "full_readme")
-        blocks = convert(canonical)
+        blocks = to_notion(canonical)
         types = {b["type"] for b in blocks}
         expected = {
             "heading_1",
@@ -213,7 +213,7 @@ class TestAcidInlineAnnotations:
 
     def test_dense_inline_annotations(self):
         canonical = next(md for name, md in ACID_TESTS if name == "dense_inline")
-        blocks = convert(canonical)
+        blocks = to_notion(canonical)
         rt = blocks[0]["paragraph"]["rich_text"]
         annotation_keys = set()
         has_link = False
@@ -234,7 +234,7 @@ class TestAcidTableFormattedCells:
 
     def test_cell_formatting_preserved(self):
         canonical = next(md for name, md in ACID_TESTS if name == "table_formatted_cells")
-        md_out = to_markdown(convert(canonical))
+        md_out = to_markdown(to_notion(canonical))
         # Bold cell
         assert "**Auth**" in md_out
         # Italic cell
@@ -252,7 +252,7 @@ class TestAcidNestedListDepth:
 
     def test_three_level_indentation(self):
         canonical = next(md for name, md in ACID_TESTS if name == "nested_lists_3_deep")
-        md_out = to_markdown(convert(canonical))
+        md_out = to_markdown(to_notion(canonical))
         lines = md_out.splitlines()
         # Level 1 — no indent
         assert any(line.startswith("- Level 1") for line in lines)

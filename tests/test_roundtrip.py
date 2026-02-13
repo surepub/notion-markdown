@@ -1,29 +1,29 @@
 """Bidirectional roundtrip snapshot tests.
 
 These tests pin the **exact** output of both conversion directions so that
-any future change to ``convert()`` or ``to_markdown()`` that breaks symmetry
+any future change to ``to_notion()`` or ``to_markdown()`` that breaks symmetry
 is caught immediately.
 
 For each fixture we test three properties:
 
 1. **MD → Blocks → MD** (idempotent):
-   ``to_markdown(convert(canonical_md)) == canonical_md``
+   ``to_markdown(to_notion(canonical_md)) == canonical_md``
 
 2. **Blocks → MD → Blocks** (idempotent):
-   ``convert(to_markdown(blocks)) == blocks``
+   ``to_notion(to_markdown(blocks)) == blocks``
 
 3. **Stability** (double-roundtrip):
    A second roundtrip produces the exact same Markdown and blocks.
 
 Every canonical Markdown string below is the *normalised* form — the stable
-output after one ``to_markdown(convert(…))`` pass.  If a test fails, it means
+output after one ``to_markdown(to_notion(…))`` pass.  If a test fails, it means
 the conversion contract changed and the canonical form needs to be reviewed
 and intentionally updated.
 """
 
 import pytest
 
-from notion_markdown import convert, to_markdown
+from notion_markdown import to_markdown, to_notion
 
 # ── Helpers for building rich-text fixtures concisely ─────────────────────
 
@@ -475,7 +475,7 @@ class TestMarkdownToBlocksToMarkdown:
 
     @pytest.mark.parametrize(("name", "canonical_md", "expected_blocks"), FIXTURES, ids=_IDS)
     def test_md_to_blocks_to_md(self, name, canonical_md, expected_blocks):
-        assert to_markdown(convert(canonical_md)) == canonical_md
+        assert to_markdown(to_notion(canonical_md)) == canonical_md
 
 
 class TestBlocksToMarkdownToBlocks:
@@ -483,15 +483,15 @@ class TestBlocksToMarkdownToBlocks:
 
     @pytest.mark.parametrize(("name", "canonical_md", "expected_blocks"), FIXTURES, ids=_IDS)
     def test_blocks_to_md_to_blocks(self, name, canonical_md, expected_blocks):
-        assert convert(to_markdown(expected_blocks)) == expected_blocks
+        assert to_notion(to_markdown(expected_blocks)) == expected_blocks
 
 
-class TestConvertMatchesExpected:
-    """convert(canonical_md) produces exactly the expected blocks."""
+class TestToNotionMatchesExpected:
+    """to_notion(canonical_md) produces exactly the expected blocks."""
 
     @pytest.mark.parametrize(("name", "canonical_md", "expected_blocks"), FIXTURES, ids=_IDS)
-    def test_convert_exact(self, name, canonical_md, expected_blocks):
-        assert convert(canonical_md) == expected_blocks
+    def test_to_notion_exact(self, name, canonical_md, expected_blocks):
+        assert to_notion(canonical_md) == expected_blocks
 
 
 class TestToMarkdownMatchesExpected:
@@ -508,11 +508,11 @@ class TestDoubleRoundtripStability:
     @pytest.mark.parametrize(("name", "canonical_md", "expected_blocks"), FIXTURES, ids=_IDS)
     def test_double_roundtrip(self, name, canonical_md, expected_blocks):
         # First roundtrip
-        blocks_1 = convert(canonical_md)
+        blocks_1 = to_notion(canonical_md)
         md_1 = to_markdown(blocks_1)
 
         # Second roundtrip
-        blocks_2 = convert(md_1)
+        blocks_2 = to_notion(md_1)
         md_2 = to_markdown(blocks_2)
 
         assert md_1 == md_2

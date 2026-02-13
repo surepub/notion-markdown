@@ -273,17 +273,17 @@ class TestInlineBr:
     """Test <br> and <br/> inline tags produce newlines."""
 
     def test_br_produces_newline(self) -> None:
-        from notion_markdown import convert
+        from notion_markdown import to_notion
 
-        blocks = convert("line one<br>line two")
+        blocks = to_notion("line one<br>line two")
         rt = blocks[0]["paragraph"]["rich_text"]
         contents = [it["text"]["content"] for it in rt if it["type"] == "text"]
         assert "\n" in contents
 
     def test_br_self_closing_produces_newline(self) -> None:
-        from notion_markdown import convert
+        from notion_markdown import to_notion
 
-        blocks = convert("before<br/>after")
+        blocks = to_notion("before<br/>after")
         rt = blocks[0]["paragraph"]["rich_text"]
         contents = [it["text"]["content"] for it in rt if it["type"] == "text"]
         assert "\n" in contents
@@ -293,18 +293,18 @@ class TestInlineUnderline:
     """Test <span underline="true"> produces underline annotation."""
 
     def test_underline_span(self) -> None:
-        from notion_markdown import convert
+        from notion_markdown import to_notion
 
-        blocks = convert('normal <span underline="true">underlined</span> more')
+        blocks = to_notion('normal <span underline="true">underlined</span> more')
         rt = blocks[0]["paragraph"]["rich_text"]
         underlined = [it for it in rt if it.get("annotations", {}).get("underline")]
         assert len(underlined) >= 1
         assert underlined[0]["text"]["content"] == "underlined"
 
     def test_underline_preserves_other_formatting(self) -> None:
-        from notion_markdown import convert
+        from notion_markdown import to_notion
 
-        blocks = convert('**bold <span underline="true">both</span> bold**')
+        blocks = to_notion('**bold <span underline="true">both</span> bold**')
         rt = blocks[0]["paragraph"]["rich_text"]
         both = [
             it
@@ -318,27 +318,27 @@ class TestInlineColor:
     """Test <span color="..."> produces color annotation."""
 
     def test_color_span(self) -> None:
-        from notion_markdown import convert
+        from notion_markdown import to_notion
 
-        blocks = convert('text <span color="red">red</span> text')
+        blocks = to_notion('text <span color="red">red</span> text')
         rt = blocks[0]["paragraph"]["rich_text"]
         colored = [it for it in rt if it.get("annotations", {}).get("color") == "red"]
         assert len(colored) >= 1
         assert colored[0]["text"]["content"] == "red"
 
     def test_color_background(self) -> None:
-        from notion_markdown import convert
+        from notion_markdown import to_notion
 
-        blocks = convert('<span color="blue_bg">highlighted</span>')
+        blocks = to_notion('<span color="blue_bg">highlighted</span>')
         rt = blocks[0]["paragraph"]["rich_text"]
         colored = [it for it in rt if it.get("annotations", {}).get("color") == "blue_bg"]
         assert len(colored) >= 1
 
     def test_orphan_span_close_ignored(self) -> None:
         """A </span> without a matching open is silently ignored."""
-        from notion_markdown import convert
+        from notion_markdown import to_notion
 
-        blocks = convert("text</span>more")
+        blocks = to_notion("text</span>more")
         # Should not crash; content produced
         assert len(blocks) >= 1
 
@@ -348,10 +348,10 @@ class TestSpanEdgeCases:
 
     def test_nested_color_inside_underline(self) -> None:
         """Nested spans: <span underline><span color="red">text</span></span>."""
-        from notion_markdown import convert
+        from notion_markdown import to_notion
 
         md = '<span underline="true"><span color="red">both</span></span>'
-        blocks = convert(md)
+        blocks = to_notion(md)
         rt = blocks[0]["paragraph"]["rich_text"]
         both = [
             it
@@ -363,10 +363,10 @@ class TestSpanEdgeCases:
 
     def test_nested_underline_inside_color(self) -> None:
         """Nested spans: <span color><span underline>text</span></span>."""
-        from notion_markdown import convert
+        from notion_markdown import to_notion
 
         md = '<span color="blue"><span underline="true">both</span></span>'
-        blocks = convert(md)
+        blocks = to_notion(md)
         rt = blocks[0]["paragraph"]["rich_text"]
         both = [
             it
@@ -378,10 +378,10 @@ class TestSpanEdgeCases:
 
     def test_bold_inside_color_span(self) -> None:
         """Bold markdown inside a color span."""
-        from notion_markdown import convert
+        from notion_markdown import to_notion
 
         md = '<span color="green">**bold green**</span>'
-        blocks = convert(md)
+        blocks = to_notion(md)
         rt = blocks[0]["paragraph"]["rich_text"]
         colored_bold = [
             it
@@ -393,10 +393,10 @@ class TestSpanEdgeCases:
 
     def test_codespan_inside_underline_span(self) -> None:
         """Inline code inside an underline span."""
-        from notion_markdown import convert
+        from notion_markdown import to_notion
 
         md = '<span underline="true">`code`</span>'
-        blocks = convert(md)
+        blocks = to_notion(md)
         rt = blocks[0]["paragraph"]["rich_text"]
         code_underline = [
             it
@@ -407,20 +407,20 @@ class TestSpanEdgeCases:
 
     def test_linebreak_inside_span(self) -> None:
         """A hard line break inside a span."""
-        from notion_markdown import convert
+        from notion_markdown import to_notion
 
         md = '<span color="red">line1  \nline2</span>'
-        blocks = convert(md)
+        blocks = to_notion(md)
         rt = blocks[0]["paragraph"]["rich_text"]
         newlines = [it for it in rt if it.get("text", {}).get("content") == "\n"]
         assert len(newlines) >= 1
 
     def test_other_token_inside_span(self) -> None:
         """An inline math token inside a color span."""
-        from notion_markdown import convert
+        from notion_markdown import to_notion
 
         md = '<span color="blue">before $x^2$ after</span>'
-        blocks = convert(md)
+        blocks = to_notion(md)
         rt = blocks[0]["paragraph"]["rich_text"]
         # Should have text and equation items
         types = [it["type"] for it in rt]
@@ -428,10 +428,10 @@ class TestSpanEdgeCases:
 
     def test_span_with_no_closing_tag(self) -> None:
         """An open span with no closing tag consumes everything."""
-        from notion_markdown import convert
+        from notion_markdown import to_notion
 
         md = '<span color="red">no closing tag here'
-        blocks = convert(md)
+        blocks = to_notion(md)
         # Should not crash; content produced with color
         assert len(blocks) >= 1
 
@@ -457,10 +457,10 @@ class TestSpanEdgeCases:
 
     def test_unrecognized_html_inside_span(self) -> None:
         """Unrecognized inline HTML inside a span passes through."""
-        from notion_markdown import convert
+        from notion_markdown import to_notion
 
         md = '<span color="red"><em>italic</em></span>'
-        blocks = convert(md)
+        blocks = to_notion(md)
         rt = blocks[0]["paragraph"]["rich_text"]
         # Should have items with color annotation
         colored = [it for it in rt if it.get("annotations", {}).get("color") == "red"]
