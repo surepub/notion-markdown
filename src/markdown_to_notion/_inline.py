@@ -11,6 +11,8 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING
 
+from markdown_to_notion._html import parse_inline_html
+
 if TYPE_CHECKING:
     from markdown_to_notion._types import (
         RichText,
@@ -33,6 +35,7 @@ class _Style:
     strikethrough: bool = False
     underline: bool = False
     code: bool = False
+    color: str = ""
 
 
 _DEFAULT_STYLE = _Style()
@@ -47,6 +50,19 @@ _CONTAINER_FIELD: dict[str, str] = {
 }
 
 _CONTAINER_TYPES = frozenset(_CONTAINER_FIELD)
+
+
+def _apply_container(style: _Style, ttype: str) -> _Style:
+    """Return a new ``_Style`` with the formatting for *ttype* enabled."""
+    field = _CONTAINER_FIELD[ttype]
+    if field == "bold":
+        return replace(style, bold=True)
+    if field == "italic":
+        return replace(style, italic=True)
+    if field == "strikethrough":
+        return replace(style, strikethrough=True)
+    # "underline" (from mark / insert)
+    return replace(style, underline=True)
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────
@@ -69,7 +85,7 @@ def _tok_raw(tok: _Token) -> str:
 def _tok_children(tok: _Token) -> list[_Token]:
     """Get the ``children`` list from a token, defaulting to ``[]``."""
     c = tok.get("children")
-    if c is None:
+    if c is None or isinstance(c, str):
         return []
     return c
 
@@ -91,6 +107,8 @@ def _to_annotations(style: _Style) -> RichTextAnnotations:
         result["underline"] = True
     if style.code:
         result["code"] = True
+    if style.color:
+        result["color"] = style.color
     return result
 
 
@@ -154,8 +172,7 @@ def parse_inline(
 
         # ── Container: bold / italic / strikethrough / etc. ────────────
         elif ttype in _CONTAINER_TYPES:
-            field = _CONTAINER_FIELD[ttype]
-            child_style = replace(_style, **{field: True})
+            child_style = _apply_container(_style, ttype)
             result.extend(
                 parse_inline(_tok_children(token), _style=child_style, _link_url=_link_url),
             )
@@ -163,11 +180,12 @@ def parse_inline(
         # ── Leaf: inline code ──────────────────────────────────────────
         elif ttype == "codespan":
             raw = _tok_raw(token)
-            result.append(_make_text(raw, replace(_style, code=True), _link_url))
+            if raw:
+                result.append(_make_text(raw, replace(_style, code=True), _link_url))
 
         # ── Container: link ────────────────────────────────────────────
         elif ttype == "link":
-            attrs = tok.get("attrs") if (tok := token) else None
+            attrs = token.get("attrs")
             url = ""
             if isinstance(attrs, dict):
                 u = attrs.get("url")
@@ -205,10 +223,118 @@ def parse_inline(
             if raw:
                 result.append(_make_equation(raw))
 
-        # ── Raw inline HTML — pass through as plain text ───────────────
+        # ── Inline HTML — detect Notion patterns, else pass through ────
         elif ttype in ("inline_html", "html"):
-            raw = _tok_raw(token)
-            if raw:
-                result.append(_make_text(raw, _style, _link_url))
+            consumed = _handle_inline_html(
+                token,
+                children,
+                _style,
+                _link_url,
+                result,
+            )
+            if consumed is not None:
+                return consumed
 
     return result
+
+
+def _handle_inline_html(
+    token: _Token,
+    siblings: list[_Token],
+    style: _Style,
+    link_url: str | None,
+    out: list[RichText],
+) -> list[RichText] | None:
+    """Handle an inline HTML token.  Returns the final result list if this
+    token consumed remaining siblings (span open), or ``None`` to continue.
+    """
+    raw = _tok_raw(token)
+    if not raw:
+        return None
+
+    html_result = parse_inline_html(raw)
+
+    if html_result is None:
+        out.append(_make_text(raw, style, link_url))
+        return None
+
+    if html_result.is_br:
+        out.append(_make_text("\n", style, link_url))
+        return None
+
+    if html_result.is_span_open:
+        span_style = style
+        if html_result.underline:
+            span_style = replace(span_style, underline=True)
+        if html_result.color:
+            span_style = replace(span_style, color=html_result.color)
+        remaining = _process_span(
+            siblings[siblings.index(token) + 1 :],
+            style=span_style,
+            link_url=link_url,
+            out=out,
+        )
+        out.extend(parse_inline(remaining, _style=style, _link_url=link_url))
+        return out
+
+    # is_span_close without a matching open → ignore silently
+    return None
+
+
+def _process_span(
+    tokens: list[_Token],
+    *,
+    style: _Style,
+    link_url: str | None,
+    out: list[RichText],
+) -> list[_Token]:
+    """Consume tokens inside an HTML ``<span>`` until ``</span>``.
+
+    Appends rich-text items to *out* and returns the unconsumed tail.
+    """
+    for i, token in enumerate(tokens):
+        ttype = _tok_type(token)
+
+        if ttype in ("inline_html", "html"):
+            raw = _tok_raw(token)
+            html_result = parse_inline_html(raw)
+            if html_result is not None and html_result.is_span_close:
+                # End of span — return remaining tokens
+                return tokens[i + 1 :]
+            # Nested span or other HTML inside span
+            if html_result is not None and html_result.is_span_open:
+                inner_style = style
+                if html_result.underline:
+                    inner_style = replace(inner_style, underline=True)
+                if html_result.color:
+                    inner_style = replace(inner_style, color=html_result.color)
+                remaining = _process_span(
+                    tokens[i + 1 :],
+                    style=inner_style,
+                    link_url=link_url,
+                    out=out,
+                )
+                return _process_span(remaining, style=style, link_url=link_url, out=out)
+            # Other inline HTML inside span
+            if raw:
+                out.append(_make_text(raw, style, link_url))
+        elif ttype == "text":
+            raw = _tok_raw(token)
+            if raw:
+                out.append(_make_text(raw, style, link_url))
+        elif ttype in _CONTAINER_TYPES:
+            child_style = _apply_container(style, ttype)
+            out.extend(
+                parse_inline(_tok_children(token), _style=child_style, _link_url=link_url),
+            )
+        elif ttype == "codespan":
+            raw = _tok_raw(token)
+            out.append(_make_text(raw, replace(style, code=True), link_url))
+        elif ttype in ("softbreak", "linebreak"):
+            out.append(_make_text("\n", style, link_url))
+        else:
+            # Other inline tokens — process with current span style
+            out.extend(parse_inline([token], _style=style, _link_url=link_url))
+
+    # No closing </span> found — consumed everything
+    return []

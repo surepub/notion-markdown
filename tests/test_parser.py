@@ -110,7 +110,7 @@ class TestBulletedList:
         md = "- item\n\n  ```python\n  x = 1\n  ```"
         blocks = parse(md)
         assert len(blocks) >= 1
-        # The code block should either be nested or at top level
+        # Collect all block types including nested children
         all_types: list[str] = []
         for b in blocks:
             all_types.append(b["type"])
@@ -118,7 +118,7 @@ class TestBulletedList:
             if btype in b:
                 children = b[btype].get("children", [])
                 all_types.extend(c["type"] for c in children)
-        assert "code" in all_types or "bulleted_list_item" in all_types
+        assert "code" in all_types
 
 
 # ── Numbered lists ─────────────────────────────────────────────────────────
@@ -338,11 +338,133 @@ class TestBlockHTML:
 
     def test_empty_html_block_skipped(self) -> None:
         """An empty HTML block produces no output."""
-        # This is hard to trigger via markdown, test via parser internals
         from markdown_to_notion._parser import _convert_block_html
 
         result = _convert_block_html({"type": "block_html", "raw": ""})
         assert result == []
+
+
+# ── Callout (from <aside>) ─────────────────────────────────────────────────
+
+
+class TestCallout:
+    def test_aside_callout_with_emoji(self) -> None:
+        blocks = parse("<aside>\n🤝 Please reach out.\n</aside>")
+        assert len(blocks) == 1
+        assert blocks[0]["type"] == "callout"
+        assert blocks[0]["callout"]["icon"] == {"emoji": "🤝"}
+
+    def test_aside_callout_text(self) -> None:
+        blocks = parse("<aside>\n💡 Tip: check the docs.\n</aside>")
+        text = blocks[0]["callout"]["rich_text"][0]["text"]["content"]
+        assert "Tip: check the docs." in text
+
+    def test_aside_callout_no_emoji(self) -> None:
+        blocks = parse("<aside>Just a note.</aside>")
+        assert blocks[0]["type"] == "callout"
+        assert "icon" not in blocks[0]["callout"]
+
+    def test_callout_tag_with_attrs(self) -> None:
+        blocks = parse('<callout icon="🔥" color="red_bg">Hot tip!</callout>')
+        assert len(blocks) == 1
+        callout = blocks[0]["callout"]
+        assert callout["icon"] == {"emoji": "🔥"}
+        assert callout["color"] == "red_bg"
+        assert callout["rich_text"][0]["text"]["content"] == "Hot tip!"
+
+
+# ── Toggle (from <details>) ───────────────────────────────────────────────
+
+
+class TestToggle:
+    def test_details_toggle(self) -> None:
+        blocks = parse("<details><summary>Click me</summary>Secret content</details>")
+        assert len(blocks) == 1
+        assert blocks[0]["type"] == "toggle"
+        toggle = blocks[0]["toggle"]
+        assert toggle["rich_text"][0]["text"]["content"] == "Click me"
+        assert (
+            toggle["children"][0]["paragraph"]["rich_text"][0]["text"]["content"]
+            == "Secret content"
+        )
+
+    def test_details_empty_body(self) -> None:
+        blocks = parse("<details><summary>Title</summary></details>")
+        assert blocks[0]["type"] == "toggle"
+        assert "children" not in blocks[0]["toggle"]
+
+    def test_multiline_details(self) -> None:
+        md = "<details>\n<summary>Expand</summary>\nSome body text.\n</details>"
+        blocks = parse(md)
+        assert blocks[0]["type"] == "toggle"
+
+
+# ── Mixed standard markdown + Notion HTML ──────────────────────────────────
+
+
+class TestMixedContent:
+    def test_callout_between_paragraphs(self) -> None:
+        md = "Before.\n\n<aside>\n💡 Note\n</aside>\n\nAfter."
+        blocks = parse(md)
+        types = [b["type"] for b in blocks]
+        assert "paragraph" in types
+        assert "callout" in types
+
+    def test_toggle_after_heading(self) -> None:
+        md = "# Title\n\n<details><summary>FAQ</summary>Answer here</details>"
+        blocks = parse(md)
+        types = [b["type"] for b in blocks]
+        assert "heading_1" in types
+        assert "toggle" in types
+
+    def test_full_notion_export_document(self) -> None:
+        """Test a realistic Notion export with mixed content."""
+        md = """\
+# Project Notes
+
+Some **bold** and *italic* text.
+
+<aside>
+🤝 For any question, reach out to the team.
+</aside>
+
+## Steps
+
+1. First step
+2. Second step with [link](https://example.com)
+
+- [x] Done
+- [ ] Pending
+
+<details><summary>Technical Details</summary>
+Implementation notes go here.
+</details>
+
+```python
+def hello():
+    return "world"
+```
+
+---
+
+| Col1 | Col2 |
+|------|------|
+| A    | B    |
+
+format: has ~~strike~~, <span underline="true">under</span>, `code`
+"""
+        blocks = parse(md)
+        types = [b["type"] for b in blocks]
+        assert "heading_1" in types
+        assert "heading_2" in types
+        assert "paragraph" in types
+        assert "callout" in types
+        assert "numbered_list_item" in types
+        assert "to_do" in types
+        assert "toggle" in types
+        assert "code" in types
+        assert "divider" in types
+        assert "table" in types
 
 
 # ── Edge cases ─────────────────────────────────────────────────────────────
@@ -410,8 +532,7 @@ class TestEdgeCases:
         """If mistune returns a string (non-AST), parse returns []."""
         from unittest.mock import patch
 
-        with patch("markdown_to_notion._parser.mistune") as mock_mistune:
-            mock_md = mock_mistune.create_markdown.return_value
+        with patch("markdown_to_notion._parser._MD") as mock_md:
             mock_md.return_value = "<p>html</p>"
             result = parse("anything")
             assert result == []
@@ -458,6 +579,23 @@ class TestCoverageEdgeCases:
         assert result[0]["type"] == "bulleted_list_item"
         rt = result[0]["bulleted_list_item"]["rich_text"]
         assert rt[0]["text"]["content"] == "direct text"
+
+    def test_table_rows_padded_to_width(self) -> None:
+        """Ragged rows are padded to table_width for Notion API compliance."""
+        from markdown_to_notion._parser import _pad_row
+
+        cells: list[list] = [[{"type": "text", "text": {"content": "A"}}]]
+        padded = _pad_row(cells, 3)
+        assert len(padded) == 3
+        assert padded[0] == cells[0]
+        assert padded[1] == []
+        assert padded[2] == []
+
+    def test_pad_row_no_change_when_full(self) -> None:
+        from markdown_to_notion._parser import _pad_row
+
+        cells: list[list] = [[], []]
+        assert _pad_row(cells, 2) is cells
 
     def test_table_body_direct_cells(self) -> None:
         """Table body with direct table_cell children instead of table_row (lines 369-378)."""

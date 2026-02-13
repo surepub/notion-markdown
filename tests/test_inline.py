@@ -258,6 +258,226 @@ class TestInlineHTML:
         full_text = "".join(it["text"]["content"] for it in items if it.get("type") == "text")
         assert "text" in full_text
 
+    def test_unrecognized_html_passthrough(self) -> None:
+        """Unrecognized inline HTML passes through as plain text."""
+        md_html = mistune.create_markdown(renderer="ast", plugins=[])
+        tokens = md_html("text <em>emphasis</em> more")
+        children = tokens[0].get("children", [])
+        items = parse_inline(children)
+        # <em> is unrecognized by our parser → pass through as text
+        all_text = "".join(it["text"]["content"] for it in items if it.get("type") == "text")
+        assert "text" in all_text
+
+
+class TestInlineBr:
+    """Test <br> and <br/> inline tags produce newlines."""
+
+    def test_br_produces_newline(self) -> None:
+        from markdown_to_notion import convert
+
+        blocks = convert("line one<br>line two")
+        rt = blocks[0]["paragraph"]["rich_text"]
+        contents = [it["text"]["content"] for it in rt if it["type"] == "text"]
+        assert "\n" in contents
+
+    def test_br_self_closing_produces_newline(self) -> None:
+        from markdown_to_notion import convert
+
+        blocks = convert("before<br/>after")
+        rt = blocks[0]["paragraph"]["rich_text"]
+        contents = [it["text"]["content"] for it in rt if it["type"] == "text"]
+        assert "\n" in contents
+
+
+class TestInlineUnderline:
+    """Test <span underline="true"> produces underline annotation."""
+
+    def test_underline_span(self) -> None:
+        from markdown_to_notion import convert
+
+        blocks = convert('normal <span underline="true">underlined</span> more')
+        rt = blocks[0]["paragraph"]["rich_text"]
+        underlined = [it for it in rt if it.get("annotations", {}).get("underline")]
+        assert len(underlined) >= 1
+        assert underlined[0]["text"]["content"] == "underlined"
+
+    def test_underline_preserves_other_formatting(self) -> None:
+        from markdown_to_notion import convert
+
+        blocks = convert('**bold <span underline="true">both</span> bold**')
+        rt = blocks[0]["paragraph"]["rich_text"]
+        both = [
+            it
+            for it in rt
+            if it.get("annotations", {}).get("underline") and it.get("annotations", {}).get("bold")
+        ]
+        assert len(both) >= 1
+
+
+class TestInlineColor:
+    """Test <span color="..."> produces color annotation."""
+
+    def test_color_span(self) -> None:
+        from markdown_to_notion import convert
+
+        blocks = convert('text <span color="red">red</span> text')
+        rt = blocks[0]["paragraph"]["rich_text"]
+        colored = [it for it in rt if it.get("annotations", {}).get("color") == "red"]
+        assert len(colored) >= 1
+        assert colored[0]["text"]["content"] == "red"
+
+    def test_color_background(self) -> None:
+        from markdown_to_notion import convert
+
+        blocks = convert('<span color="blue_bg">highlighted</span>')
+        rt = blocks[0]["paragraph"]["rich_text"]
+        colored = [it for it in rt if it.get("annotations", {}).get("color") == "blue_bg"]
+        assert len(colored) >= 1
+
+    def test_orphan_span_close_ignored(self) -> None:
+        """A </span> without a matching open is silently ignored."""
+        from markdown_to_notion import convert
+
+        blocks = convert("text</span>more")
+        # Should not crash; content produced
+        assert len(blocks) >= 1
+
+
+class TestSpanEdgeCases:
+    """Test span processing edge cases for full coverage."""
+
+    def test_nested_color_inside_underline(self) -> None:
+        """Nested spans: <span underline><span color="red">text</span></span>."""
+        from markdown_to_notion import convert
+
+        md = '<span underline="true"><span color="red">both</span></span>'
+        blocks = convert(md)
+        rt = blocks[0]["paragraph"]["rich_text"]
+        both = [
+            it
+            for it in rt
+            if it.get("annotations", {}).get("underline")
+            and it.get("annotations", {}).get("color") == "red"
+        ]
+        assert len(both) >= 1
+
+    def test_nested_underline_inside_color(self) -> None:
+        """Nested spans: <span color><span underline>text</span></span>."""
+        from markdown_to_notion import convert
+
+        md = '<span color="blue"><span underline="true">both</span></span>'
+        blocks = convert(md)
+        rt = blocks[0]["paragraph"]["rich_text"]
+        both = [
+            it
+            for it in rt
+            if it.get("annotations", {}).get("underline")
+            and it.get("annotations", {}).get("color") == "blue"
+        ]
+        assert len(both) >= 1
+
+    def test_bold_inside_color_span(self) -> None:
+        """Bold markdown inside a color span."""
+        from markdown_to_notion import convert
+
+        md = '<span color="green">**bold green**</span>'
+        blocks = convert(md)
+        rt = blocks[0]["paragraph"]["rich_text"]
+        colored_bold = [
+            it
+            for it in rt
+            if it.get("annotations", {}).get("color") == "green"
+            and it.get("annotations", {}).get("bold")
+        ]
+        assert len(colored_bold) >= 1
+
+    def test_codespan_inside_underline_span(self) -> None:
+        """Inline code inside an underline span."""
+        from markdown_to_notion import convert
+
+        md = '<span underline="true">`code`</span>'
+        blocks = convert(md)
+        rt = blocks[0]["paragraph"]["rich_text"]
+        code_underline = [
+            it
+            for it in rt
+            if it.get("annotations", {}).get("underline") and it.get("annotations", {}).get("code")
+        ]
+        assert len(code_underline) >= 1
+
+    def test_linebreak_inside_span(self) -> None:
+        """A hard line break inside a span."""
+        from markdown_to_notion import convert
+
+        md = '<span color="red">line1  \nline2</span>'
+        blocks = convert(md)
+        rt = blocks[0]["paragraph"]["rich_text"]
+        newlines = [it for it in rt if it.get("text", {}).get("content") == "\n"]
+        assert len(newlines) >= 1
+
+    def test_other_token_inside_span(self) -> None:
+        """An inline math token inside a color span."""
+        from markdown_to_notion import convert
+
+        md = '<span color="blue">before $x^2$ after</span>'
+        blocks = convert(md)
+        rt = blocks[0]["paragraph"]["rich_text"]
+        # Should have text and equation items
+        types = [it["type"] for it in rt]
+        assert "text" in types
+
+    def test_span_with_no_closing_tag(self) -> None:
+        """An open span with no closing tag consumes everything."""
+        from markdown_to_notion import convert
+
+        md = '<span color="red">no closing tag here'
+        blocks = convert(md)
+        # Should not crash; content produced with color
+        assert len(blocks) >= 1
+
+    def test_empty_inline_html_token(self) -> None:
+        """An inline_html token with empty raw is skipped."""
+        from markdown_to_notion._inline import _handle_inline_html, _Style
+
+        result = _handle_inline_html(
+            {"type": "inline_html", "raw": ""},
+            [],
+            _Style(),
+            None,
+            [],
+        )
+        assert result is None
+
+    def test_mark_container_applies_underline(self) -> None:
+        """The ==mark== syntax (via mark plugin) applies underline."""
+        from markdown_to_notion._inline import _apply_container, _Style
+
+        style = _apply_container(_Style(), "mark")
+        assert style.underline is True
+
+    def test_unrecognized_html_inside_span(self) -> None:
+        """Unrecognized inline HTML inside a span passes through."""
+        from markdown_to_notion import convert
+
+        md = '<span color="red"><em>italic</em></span>'
+        blocks = convert(md)
+        rt = blocks[0]["paragraph"]["rich_text"]
+        # Should have items with color annotation
+        colored = [it for it in rt if it.get("annotations", {}).get("color") == "red"]
+        assert len(colored) >= 1
+
+
+class TestCalloutColorOnly:
+    """Test callout with color but no icon (line 154 in _html.py)."""
+
+    def test_callout_color_no_icon(self) -> None:
+        from markdown_to_notion._html import _build_callout
+
+        blocks = _build_callout("Note text", icon="", color="gray_bg")
+        assert blocks[0]["type"] == "callout"
+        assert blocks[0]["callout"]["color"] == "gray_bg"
+        assert "icon" not in blocks[0]["callout"]
+
 
 class TestLineBreaks:
     def test_softbreak(self) -> None:
