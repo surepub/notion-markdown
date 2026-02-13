@@ -6,13 +6,17 @@
 [![Python](https://img.shields.io/pypi/pyversions/notion-markdown)](https://pypi.org/project/notion-markdown/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-Convert Markdown to Notion API block objects. Fully typed, zero dependencies beyond [mistune](https://github.com/lepture/mistune).
+Bidirectional conversion between Markdown and Notion API block objects. Fully typed, zero dependencies beyond [mistune](https://github.com/lepture/mistune).
 
 ```python
-from notion_markdown import convert
+from notion_markdown import convert, to_markdown
 
+# Markdown → Notion blocks
 blocks = convert("# Hello\n\nSome **bold** text.")
-# → list of Notion API block dicts, ready for notion-client
+
+# Notion blocks → Markdown
+md = to_markdown(blocks)
+# "# Hello\n\nSome **bold** text.\n"
 ```
 
 ## Installation
@@ -23,7 +27,7 @@ pip install notion-markdown
 
 ## CLI
 
-Convert a Markdown file to Notion API JSON:
+### Markdown to Notion blocks
 
 ```bash
 # File to stdout
@@ -39,11 +43,25 @@ notion-markdown to-notion README.md -o blocks.json
 notion-markdown to-notion README.md --indent 0
 ```
 
+### Notion blocks to Markdown
+
+```bash
+# JSON file to stdout
+notion-markdown to-markdown blocks.json
+
+# Pipe from stdin
+cat blocks.json | notion-markdown to-markdown
+
+# Write to a file
+notion-markdown to-markdown blocks.json -o output.md
+```
+
 ## Python API
 
-The library exposes a single function — `convert()` — that takes a Markdown
-string and returns a list of Notion API block objects. Pass them directly to
-[notion-client](https://github.com/ramnes/notion-sdk-py):
+### `convert()` — Markdown to Notion blocks
+
+Takes a Markdown string and returns a list of Notion API block objects.
+Pass them directly to [notion-client](https://github.com/ramnes/notion-sdk-py):
 
 ```python
 from notion_client import Client
@@ -57,6 +75,38 @@ notion.pages.create(
     properties={"title": [{"text": {"content": "My Page"}}]},
     children=blocks,
 )
+```
+
+### `to_markdown()` — Notion blocks to Markdown
+
+Takes a list of Notion API block objects and returns a Markdown string.
+Works with blocks from `convert()` or directly from the Notion API:
+
+```python
+from notion_markdown import to_markdown
+
+# From convert() output
+blocks = convert("# Hello\n\nWorld")
+md = to_markdown(blocks)
+
+# From the Notion API
+page_blocks = notion.blocks.children.list(block_id="...")["results"]
+md = to_markdown(page_blocks)
+```
+
+### Roundtrip guarantee
+
+The two functions are inverses — converting in either direction and back
+produces identical output:
+
+```python
+from notion_markdown import convert, to_markdown
+
+md = "# Title\n\nSome **bold** text.\n"
+assert to_markdown(convert(md)) == md
+
+blocks = convert(md)
+assert convert(to_markdown(blocks)) == blocks
 ```
 
 ### Handling large documents (> 100 blocks)
@@ -98,6 +148,8 @@ for i, chunk in enumerate(batched(blocks, 100)):
 | `\| table \|` | `table` + `table_row` |
 | `![alt](url)` | `image` |
 | `$$ expr $$` | `equation` |
+| `<aside>` | `callout` |
+| `<details><summary>` | `toggle` |
 
 ### Inline formatting
 
@@ -109,9 +161,14 @@ for i, chunk in enumerate(batched(blocks, 100)):
 | `` `code` `` | `code: true` |
 | `[text](url)` | `text.link.url` |
 | `$expr$` | inline `equation` |
+| `<span underline="true">` | `underline: true` |
+| `<span color="red">` | `color: "red"` |
 
 Nested formatting is fully supported — `**bold *and italic* text**` produces
 the correct flat list of rich-text items with accumulated annotations.
+
+All conversions work in both directions: `convert()` and `to_markdown()` handle
+every block and inline type listed above.
 
 ## Type Safety
 
@@ -119,9 +176,10 @@ Every return type is a `TypedDict`, giving you full IDE autocomplete and
 `mypy --strict` compatibility. No `dict[str, Any]` in the public API.
 
 ```python
-from notion_markdown import convert, NotionBlock, ParagraphBlock
+from notion_markdown import convert, to_markdown, NotionBlock, ParagraphBlock
 
 blocks: list[NotionBlock] = convert("Hello **world**")
+md: str = to_markdown(blocks)
 
 # IDE knows blocks[0] could be ParagraphBlock, HeadingOneBlock, etc.
 # and gives autocomplete for block["paragraph"]["rich_text"]
@@ -136,8 +194,9 @@ from notion_markdown import (
     # Block types
     ParagraphBlock, HeadingOneBlock, HeadingTwoBlock, HeadingThreeBlock,
     BulletedListItemBlock, NumberedListItemBlock, ToDoBlock,
-    CodeBlock, QuoteBlock, DividerBlock, TableBlock, ImageBlock,
-    EquationBlock, BookmarkBlock, EmbedBlock,
+    CodeBlock, QuoteBlock, CalloutBlock, ToggleBlock,
+    DividerBlock, TableBlock, ImageBlock,
+    EquationBlock, BookmarkBlock, EmbedBlock, VideoBlock,
     # Rich-text types
     RichText, RichTextText, RichTextEquation, RichTextAnnotations,
     # Union of all blocks

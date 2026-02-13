@@ -6,7 +6,7 @@
 |--------|-----------|-------|
 | Run `pytest --cov --cov-fail-under=100` before opening PRs | Before bumping the version or creating a release | Push directly to `main` — branch protection requires PRs |
 | Use `uv` for dependency management | Before adding new dependencies to `pyproject.toml` | Hardcode version strings in tests — they break on every release |
-| Keep 100% test coverage | Before changing public API (`convert()`, exported types) | Commit secrets or tokens |
+| Keep 100% test coverage | Before changing public API (`convert()`, `to_markdown()`, exported types) | Commit secrets or tokens |
 
 ## Release Process
 
@@ -31,14 +31,21 @@ CI uses `uv` (via `astral-sh/setup-uv@v4`) for Python and dependency management.
 
 ## Architecture
 
-**Functional pipeline:** Markdown string → mistune AST tokens → Notion API block dicts.
+**Two pipelines — forward and reverse:**
+
+Forward (Markdown → Notion): `markdown string → mistune AST → Notion block dicts`
+Reverse (Notion → Markdown): `Notion block dicts → Markdown string`
 
 - `_html.py` — preprocesses Notion-specific HTML (`<aside>`, `<callout>`, `<details>`, `<span>` with data attributes) before mistune parsing
 - `_parser.py` — converts block-level mistune tokens to Notion blocks via `_convert_block()` dispatch
 - `_inline.py` — flattens nested inline formatting into flat Notion rich-text with accumulated annotations using `_Style` dataclass
+- `_renderer.py` — converts Notion blocks back to Markdown via `_RENDERERS` dispatch dict (inverse of `_parser.py`)
+- `_rich_text.py` — converts Notion rich-text items back to inline Markdown (inverse of `_inline.py`)
 - `_types.py` — all public types are `TypedDict`s for IDE autocomplete and type safety
 
-**Single public entry point:** `convert(markdown: str) -> list[NotionBlock]`
+**Two public entry points:**
+- `convert(markdown: str) -> list[NotionBlock]`
+- `to_markdown(blocks: list[NotionBlock]) -> str`
 
 ## Conventions
 
@@ -47,6 +54,7 @@ CI uses `uv` (via `astral-sh/setup-uv@v4`) for Python and dependency management.
 - **`from __future__ import annotations`** in all source files
 - **`Union[X, Y]` not `X | Y`** for runtime type aliases (ruff UP007 is ignored)
 - **`typing_extensions.NotRequired`** for optional TypedDict fields
+- **TypedDict union access under mypy --strict** — `RichText` is `Union[RichTextText, RichTextEquation]` so `.get()` calls don't resolve. Use `cast("dict[str, Any]", item)` then access via the dict. See `_rich_text.py` and `_renderer.py` for the pattern.
 - **Line length:** 100 chars
 - **Test files** are exempt from type annotations (`ANN`), unused args (`ARG`), and assert checks (`S101`) via ruff per-file-ignores
 
@@ -59,8 +67,10 @@ Only two runtime dependencies — keep it minimal:
 ## Testing
 
 - 100% coverage required (`--cov-fail-under=100`)
-- Test structure mirrors source: `test_parser.py`, `test_inline.py`, `test_html.py`, `test_convert.py`
-- `test_convert.py` — end-to-end tests through the public `convert()` API
+- Test structure mirrors source: `test_parser.py`, `test_inline.py`, `test_html.py`, `test_convert.py`, `test_rich_text.py`, `test_renderer.py`
+- `test_convert.py` — end-to-end tests through the public `convert()` and `to_markdown()` APIs
+- `test_roundtrip.py` — **bidirectional snapshot tests** that pin exact output in both directions for 28 fixtures. Tests `convert(md) == blocks`, `to_markdown(blocks) == md`, and double-roundtrip stability. If either conversion changes, these tests force an intentional review.
+- `test_acid.py` — 10 complex real-world documents (dense inline formatting, 3-level nested lists, formatted table cells, full README with every block type, etc.) tested for exact roundtrip stability
 - Other test files test internal modules directly
 
 ```bash
@@ -71,4 +81,4 @@ pytest tests/ -v
 pytest tests/ --cov=notion_markdown --cov-report=term-missing --cov-fail-under=100 -v
 ```
 
-<!-- Last audited: 2026-02-12 | Initial creation from session learnings -->
+<!-- Last audited: 2026-02-12 | Added reverse pipeline (to_markdown), TypedDict cast pattern, roundtrip/acid test docs -->
