@@ -1,9 +1,9 @@
 # notion-markdown
 
-[![Lint & Format](https://github.com/sureapp/notion-markdown/actions/workflows/ci.yml/badge.svg?event=push&job=lint)](https://github.com/sureapp/notion-markdown/actions/workflows/ci.yml)
-[![Type Check](https://github.com/sureapp/notion-markdown/actions/workflows/ci.yml/badge.svg?event=push&job=typecheck)](https://github.com/sureapp/notion-markdown/actions/workflows/ci.yml)
-[![Tests](https://github.com/sureapp/notion-markdown/actions/workflows/ci.yml/badge.svg?event=push&job=test)](https://github.com/sureapp/notion-markdown/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/sureapp/notion-markdown/graph/badge.svg)](https://codecov.io/gh/sureapp/notion-markdown)
+[![Lint & Format](https://github.com/surepub/notion-markdown/actions/workflows/ci.yml/badge.svg?event=push&job=lint)](https://github.com/surepub/notion-markdown/actions/workflows/ci.yml)
+[![Type Check](https://github.com/surepub/notion-markdown/actions/workflows/ci.yml/badge.svg?event=push&job=typecheck)](https://github.com/surepub/notion-markdown/actions/workflows/ci.yml)
+[![Tests](https://github.com/surepub/notion-markdown/actions/workflows/ci.yml/badge.svg?event=push&job=test)](https://github.com/surepub/notion-markdown/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/surepub/notion-markdown/graph/badge.svg)](https://codecov.io/gh/surepub/notion-markdown)
 [![PyPI](https://img.shields.io/pypi/v/notion-markdown)](https://pypi.org/project/notion-markdown/)
 [![Python](https://img.shields.io/pypi/pyversions/notion-markdown)](https://pypi.org/project/notion-markdown/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
@@ -23,7 +23,25 @@ blocks = convert("# Hello\n\nSome **bold** text.")
 pip install notion-markdown
 ```
 
-## Usage
+## CLI
+
+Convert a Markdown file to Notion API JSON:
+
+```bash
+# File to stdout
+notion-markdown to-notion README.md
+
+# Pipe from stdin
+cat README.md | notion-markdown to-notion
+
+# Write to a file
+notion-markdown to-notion README.md -o blocks.json
+
+# Compact JSON (no indentation)
+notion-markdown to-notion README.md --indent 0
+```
+
+## Python API
 
 The library exposes a single function — `convert()` — that takes a Markdown
 string and returns a list of Notion API block objects. Pass them directly to
@@ -150,7 +168,7 @@ Common language aliases are automatically mapped to Notion's language identifier
 
 ```bash
 # Clone and install
-git clone https://github.com/sureapp/notion-markdown.git
+git clone https://github.com/surepub/notion-markdown.git
 cd notion-markdown
 uv venv && uv pip install -e . && uv pip install pytest pytest-cov ruff mypy
 
