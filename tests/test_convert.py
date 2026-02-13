@@ -1,8 +1,8 @@
-"""End-to-end tests for the public convert() API."""
+"""End-to-end tests for the public convert() and to_markdown() APIs."""
 
 from __future__ import annotations
 
-from notion_markdown import convert
+from notion_markdown import convert, to_markdown
 
 
 class TestConvertAPI:
@@ -186,3 +186,14 @@ class TestNotionAPICompatibility:
     def test_bold_annotation_only_has_bold(self) -> None:
         rt = convert("**bold**")[0]["paragraph"]["rich_text"]
         assert rt[0]["annotations"] == {"bold": True}
+
+
+class TestToMarkdownAPI:
+    def test_returns_string(self) -> None:
+        blocks = convert("Hello")
+        assert isinstance(to_markdown(blocks), str)
+
+    def test_empty_returns_empty(self) -> None:
+        assert to_markdown([]) == ""
+
+    # NOTE: Comprehensive bidirectional roundtrip tests are in test_roundtrip.py.
