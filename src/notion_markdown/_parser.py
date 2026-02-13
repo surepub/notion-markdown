@@ -12,11 +12,11 @@ from typing import TYPE_CHECKING, cast
 
 import mistune
 
-from markdown_to_notion._html import parse_block_html, preprocess_notion_html
-from markdown_to_notion._inline import _tok_children, _tok_raw, _tok_type, parse_inline
+from notion_markdown._html import parse_block_html, preprocess_notion_html
+from notion_markdown._inline import _tok_children, _tok_raw, _tok_type, parse_inline
 
 if TYPE_CHECKING:
-    from markdown_to_notion._types import (
+    from notion_markdown._types import (
         HeadingData,
         NotionBlock,
         RichText,

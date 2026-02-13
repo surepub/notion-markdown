@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from markdown_to_notion._parser import parse
+from notion_markdown._parser import parse
 
 
 def _text(block: dict, key: str | None = None) -> str:
@@ -338,7 +338,7 @@ class TestBlockHTML:
 
     def test_empty_html_block_skipped(self) -> None:
         """An empty HTML block produces no output."""
-        from markdown_to_notion._parser import _convert_block_html
+        from notion_markdown._parser import _convert_block_html
 
         result = _convert_block_html({"type": "block_html", "raw": ""})
         assert result == []
@@ -494,7 +494,7 @@ class TestEdgeCases:
 
     def test_unknown_block_type_ignored(self) -> None:
         """Unknown token types produce no output."""
-        from markdown_to_notion._parser import _convert_block
+        from notion_markdown._parser import _convert_block
 
         result = _convert_block({"type": "some_unknown_type"})
         assert result == []
@@ -523,7 +523,7 @@ class TestEdgeCases:
 
     def test_image_with_no_url(self) -> None:
         """An image token with no URL produces no block."""
-        from markdown_to_notion._parser import _convert_image_block
+        from notion_markdown._parser import _convert_image_block
 
         result = _convert_image_block({"type": "image", "attrs": {}})
         assert result == []
@@ -532,7 +532,7 @@ class TestEdgeCases:
         """If mistune returns a string (non-AST), parse returns []."""
         from unittest.mock import patch
 
-        with patch("markdown_to_notion._parser._MD") as mock_md:
+        with patch("notion_markdown._parser._MD") as mock_md:
             mock_md.return_value = "<p>html</p>"
             result = parse("anything")
             assert result == []
@@ -546,7 +546,7 @@ class TestCoverageEdgeCases:
 
     def test_empty_paragraph_skipped(self) -> None:
         """A paragraph with no parseable content produces no block (line 191)."""
-        from markdown_to_notion._parser import _convert_paragraph
+        from notion_markdown._parser import _convert_paragraph
 
         # A paragraph token whose children produce no rich_text
         result = _convert_paragraph({"type": "paragraph", "children": []})
@@ -554,7 +554,7 @@ class TestCoverageEdgeCases:
 
     def test_task_list_item_without_checked_attr(self) -> None:
         """A task_list_item token without a checked attr defaults to False (line 233)."""
-        from markdown_to_notion._parser import _convert_list_item
+        from notion_markdown._parser import _convert_list_item
 
         tok = {
             "type": "task_list_item",
@@ -569,7 +569,7 @@ class TestCoverageEdgeCases:
 
     def test_tight_list_inline_children(self) -> None:
         """Tight list items have inline tokens directly as children (line 239)."""
-        from markdown_to_notion._parser import _convert_list_item
+        from notion_markdown._parser import _convert_list_item
 
         tok = {
             "type": "list_item",
@@ -582,7 +582,7 @@ class TestCoverageEdgeCases:
 
     def test_table_rows_padded_to_width(self) -> None:
         """Ragged rows are padded to table_width for Notion API compliance."""
-        from markdown_to_notion._parser import _pad_row
+        from notion_markdown._parser import _pad_row
 
         cells: list[list] = [[{"type": "text", "text": {"content": "A"}}]]
         padded = _pad_row(cells, 3)
@@ -592,14 +592,14 @@ class TestCoverageEdgeCases:
         assert padded[2] == []
 
     def test_pad_row_no_change_when_full(self) -> None:
-        from markdown_to_notion._parser import _pad_row
+        from notion_markdown._parser import _pad_row
 
         cells: list[list] = [[], []]
         assert _pad_row(cells, 2) is cells
 
     def test_table_body_direct_cells(self) -> None:
         """Table body with direct table_cell children instead of table_row (lines 369-378)."""
-        from markdown_to_notion._parser import _convert_table
+        from notion_markdown._parser import _convert_table
 
         tok = {
             "type": "table",
@@ -631,37 +631,37 @@ class TestCoverageEdgeCases:
 
 class TestAttrHelpers:
     def test_attr_str_missing_attrs(self) -> None:
-        from markdown_to_notion._parser import _attr_str
+        from notion_markdown._parser import _attr_str
 
         assert _attr_str({"type": "x"}, "url") == ""
 
     def test_attr_str_non_string_value(self) -> None:
-        from markdown_to_notion._parser import _attr_str
+        from notion_markdown._parser import _attr_str
 
         assert _attr_str({"type": "x", "attrs": {"url": 42}}, "url") == ""
 
     def test_attr_int_missing_attrs(self) -> None:
-        from markdown_to_notion._parser import _attr_int
+        from notion_markdown._parser import _attr_int
 
         assert _attr_int({"type": "x"}, "level", 5) == 5
 
     def test_attr_int_non_int_value(self) -> None:
-        from markdown_to_notion._parser import _attr_int
+        from notion_markdown._parser import _attr_int
 
         assert _attr_int({"type": "x", "attrs": {"level": "abc"}}, "level", 1) == 1
 
     def test_attr_bool_missing_attrs(self) -> None:
-        from markdown_to_notion._parser import _attr_bool
+        from notion_markdown._parser import _attr_bool
 
         assert _attr_bool({"type": "x"}, "checked") is None
 
     def test_attr_bool_missing_key(self) -> None:
-        from markdown_to_notion._parser import _attr_bool
+        from notion_markdown._parser import _attr_bool
 
         assert _attr_bool({"type": "x", "attrs": {"other": True}}, "checked") is None
 
     def test_attr_bool_present(self) -> None:
-        from markdown_to_notion._parser import _attr_bool
+        from notion_markdown._parser import _attr_bool
 
         assert _attr_bool({"type": "x", "attrs": {"checked": True}}, "checked") is True
         assert _attr_bool({"type": "x", "attrs": {"checked": False}}, "checked") is False

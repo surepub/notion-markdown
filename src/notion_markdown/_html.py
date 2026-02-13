@@ -20,7 +20,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from markdown_to_notion._types import NotionBlock, RichText
+    from notion_markdown._types import NotionBlock, RichText
 
 # ── Regex patterns ─────────────────────────────────────────────────────────
 

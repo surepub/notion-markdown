@@ -11,10 +11,10 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING
 
-from markdown_to_notion._html import parse_inline_html
+from notion_markdown._html import parse_inline_html
 
 if TYPE_CHECKING:
-    from markdown_to_notion._types import (
+    from notion_markdown._types import (
         RichText,
         RichTextAnnotations,
         RichTextEquation,

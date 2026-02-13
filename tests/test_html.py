@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from markdown_to_notion._html import (
+from notion_markdown._html import (
     InlineHTMLResult,
     parse_block_html,
     parse_inline_html,

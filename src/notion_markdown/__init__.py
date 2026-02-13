@@ -2,7 +2,7 @@
 
 .. code-block:: python
 
-    from markdown_to_notion import convert
+    from notion_markdown import convert
 
     blocks = convert("# Hello\\n\\nSome **bold** text.")
     # → list of Notion API block dicts, ready for notion-client
@@ -19,8 +19,8 @@ The return value can be passed directly to ``notion-client``::
     )
 """
 
-from markdown_to_notion._parser import parse
-from markdown_to_notion._types import (
+from notion_markdown._parser import parse
+from notion_markdown._types import (
     BookmarkBlock,
     BookmarkData,
     BulletedListItemBlock,
@@ -87,7 +87,7 @@ def convert(markdown: str) -> list[NotionBlock]:
 
     Examples
     --------
-    >>> from markdown_to_notion import convert
+    >>> from notion_markdown import convert
     >>> blocks = convert("# Title\\n\\nHello **world**!")
     >>> blocks[0]["type"]
     'heading_1'
