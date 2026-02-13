@@ -67,7 +67,7 @@ from notion_markdown._types import (
     VideoData,
 )
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 
 def convert(markdown: str) -> list[NotionBlock]:
