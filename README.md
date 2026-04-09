@@ -1,5 +1,18 @@
 # notion-markdown
 
+---
+
+> [!IMPORTANT]
+> ## 📦 This Project is Archived
+>
+> As of Feb 2026, the [Notion API now natively supports reading and writing Markdown content](https://developers.notion.com/page/changelog#february-26-2026). This library — which was built to parse and manipulate Notion blocks as Markdown — is **no longer necessary**.
+>
+> If you're working with Markdown and the Notion API, you can now use the official endpoints directly. See the [official guide](https://developers.notion.com/guides/data-apis/working-with-markdown-content) for details.
+>
+> This repository will remain available as a historical archive but will not receive further updates.
+
+---
+
 [![CI](https://github.com/surepub/notion-markdown/actions/workflows/ci.yml/badge.svg)](https://github.com/surepub/notion-markdown/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/surepub/notion-markdown/graph/badge.svg)](https://codecov.io/gh/surepub/notion-markdown)
 [![PyPI](https://img.shields.io/pypi/v/notion-markdown)](https://pypi.org/project/notion-markdown/)
